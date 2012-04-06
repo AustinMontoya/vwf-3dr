@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style type='text/css'>
+			.search-sidebar {
+				position: fixed;
+				left: 0;
+				width: 300px;
+				height: 98%;
+				background-color: #6991aa;
+				opacity: 0.9;
+				border-right: 2px solid #003471;
+			}
+				.search-sidebar div.inputContainer {
+					margin: 30px 0px 30px 10px;
+					width: 100%;
+				}
+
+				.search-sidebar div.resultsPane {
+					width: 98%;
+					height: 98%;
+					overflow-y: auto;
+					overflow-x: hidden;
+				}
+
+				.search-sidebar ul.results {
+					list-style: none;
+					text-align: center;
+					margin: 0;
+					padding: 0;
+				}
+
+					.search-sidebar ul.results li {
+						width: 280px;
+						margin: 10px auto;
+					}
+
+						.search-sidebar ul.results li img {
+							width: 180px;
+							height: 180px;
+							border-radius: 3px;
+						}
+
+			.model-menu {
+				z-index: 999999;
+				background-color: #6991aa;
+				border: 2px solid #003471;
+				border-radius: 3px;
+				padding: 10px;
+				opacity: 0.9;
+				width: 300px;
+        		height: 225px;
+        		position : absolute;
+			}
+
+				.model-menu input {
+					width: 30px;
+				}
+		</style>
+		<script src='knockout-2.0.0.js' type='text/javascript'></script>
+		<script src='http://code.jquery.com/jquery-1.7.1.min.js' type='text/javascript'></script>
+		<script type='text/javascript'>
+			(function($, ko){
+				// ViewModel
+				var SearchResultsViewModel = function(apiUrl) {
+					var self = this;
+
+					// Properties
+					self.searchVal = ko.observable();
+					self.results = ko.observableArray();
+					self.currentModel = null;
+					self.modelSelected = ko.observable(false);
+
+					// Behaviors
+					self.getResults = function() {
+						self.results([]);
+						$.get(apiUrl+'/Search/'+self.searchVal()+'/json?ID=00-00-00', function(data) {
+							$.each(data, function(i, item) {
+								$.get(apiUrl+"/"+item["PID"]+"/Metadata/json?ID=00-00-00", function(metadata) {
+										if(metadata.AnonymousDownloadAvailable) {
+											self.results.push({
+												title: metadata["Title"],
+												thumbnail: metadata["_ThumbnailLink"],
+												dataUrl: apiUrl+"/"+metadata["PID"]+"/Model/dae/uncompressed?ID=00-00-00",
+											});
+										}
+								});
+							});
+						});
+					}
+				}
+
+				// Loading Code
+				$(function() {
+					var viewModel = new SearchResultsViewModel("http://3dr.adlnet.gov/api/rest");
+					var foo = "bar";
+					$("canvas#index-vwf").bind("drop", function(e) {
+						var node = {
+							extends: "http://vwf.example.com/3drModel.vwf",
+							source: viewModel.currentModel.dataUrl,
+							type: "model/vnd.collada+xml"
+						};
+						vwf_view.kernel.createNode("floor", node, viewModel.currentModel.dataUrl, function(childId) {
+							console.log("Why don't I get called?");
+						});
+					});
+
+					$(".search-sidebar ul.results img").live("mousedown", function(){
+						viewModel.currentModel = ko.dataFor(this);
+					});
+
+					ko.applyBindings(viewModel);
+				});
+			}(jQuery, ko))
+		</script>
+	</head>
+	<body>
+		<div class="search-sidebar">
+			<div class="inputContainer">
+				<input type='text' name="searchBox" data-bind="value: searchVal" />
+				<a href='#' data-bind="click: getResults">Search</a>
+			</div>
+			<div class='resultsPane'>
+				<ul class='results' data-bind="foreach: results">
+					<li>
+						<div>
+							<img data-bind='attr: { src: thumbnail }' />
+						</div>
+						<span data-bind='text: title'></span>
+						<input type='hidden' data-bind="value: dataUrl" />
+					</li>
+				</ul>
+			</div>
+		</div> 
+		<div class="editor-pane" data-bind="visible: modelSelected">
+			Something
+		</div>
+	</body>
+</html>

@@ -1,0 +1,87 @@
+extends: http://vwf.example.com/node3.vwf
+properties:
+  menuActive: false
+scripts:
+- |
+  
+  /* Creates a small editor for translation, rotation,
+     and scale that replicates across clients.
+     Need to replicate values and keystrokes in a non-intrusive
+     way to the host, which may require this widget being created in the 
+     html with a handle to the node. This currently does not seem possible
+     because the callback from a node created client-side does not fire,
+     leaving us without a handle on the child ID. */
+
+  function editorWidget(node, params) {
+    var selected = 'scale';
+    var style = {
+        ,
+        "top": params.position[0]*100+"%",
+        "left": params.position[1]*100+"%"
+      };
+
+    function handlePropertySelection(e, propName) {
+      //TODO: Populate forms with existing values
+      // Properties do not seem to be inherited 
+      // using extends.
+      /*e.preventDefault();
+      var prop = self[propName];
+      console.log(prop);
+      $valsContainer.find("p").each(function(i, elem) {
+        $(this).find("input").val(prop[i]);
+      });*/
+      selected = propName;
+    }
+
+    var $menu = $("<div class='model-menu'>");
+    var $valsContainer = $("<div style='display: inline-block; width: 30%'>");
+
+    $.each(['x', 'y', 'z'], function(i, val){
+      $valsContainer.append($("<p>"+val+": <input type='text' /></p>").addClass(val));
+    });
+
+    var $modeContainer = $("<div style='display: inline-block; width: 60%'>").appendTo($menu);
+    
+    var $scale = $("<p><a href='#' class='scale'>Scale</a></p>").appendTo($modeContainer).find("a");
+    $scale.click(function(e) { handlePropertySelection(e, 'scale'); });
+
+    var $rotation = $("<p><a href='#' class='rotate'>Rotation</a></p>").appendTo($modeContainer).find("a");
+    $rotation.click(function(e) { handlePropertySelection(e, 'rotation' ); });
+
+    var $translation = $("<p><a href='#' class='translate'>Translation</a></p>").appendTo($modeContainer).find("a");
+    $translation.click(function(e) { handlePropertySelection(e, 'translation'); });
+
+    $menu.append($valsContainer);
+
+    var $update = $("<div style='text-align: center; margin-top: 10px'>"
+                      +"<a href='#' class='update'>Update</a></div>").appendTo($menu).find("a");
+    
+    $update.click(function(e) {
+      e.preventDefault();
+      var valsToSet = [];
+      $valsContainer.find("input").each(function(i, elem){
+        valsToSet.push($(this).val());
+      });
+      
+      if(selected === 'scale' || selected === 'translation')
+        vwf_view.kernel.setProperty(node.id, selected, valsToSet);
+    });
+
+    $menu.css(style);
+
+    return $menu;
+  }
+
+  this.pointerUp = function( parms, pickInfo ){
+
+    if(!this.menuActive) {
+
+      var $menu = editorWidget(this, parms);
+      $("#vwf-root").append($menu);
+      $menu.find("a.scale").click();
+
+      this.menuActive = true;
+    } else 
+      console.log("Menu already active");
+          
+  }
