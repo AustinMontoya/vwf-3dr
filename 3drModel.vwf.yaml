@@ -15,7 +15,6 @@ scripts:
   function editorWidget(node, params) {
     var selected = 'scale';
     var style = {
-        ,
         "top": params.position[0]*100+"%",
         "left": params.position[1]*100+"%"
       };
